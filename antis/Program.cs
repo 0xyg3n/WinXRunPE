@@ -18,7 +18,7 @@ namespace antis
             bool hidden = false;
 
             WinXParameters parameters = WinXParameters.Create(payload_amd64, calculator_amd64, hidden, arguments);
-            WinXRunPE_AMD64.Start(parameters);
+            WinX64.Start(parameters);
 
 
 
