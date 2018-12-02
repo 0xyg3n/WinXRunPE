@@ -1,5 +1,5 @@
 ﻿/*
- * WinXRunPE.cs
+ * WinX86.cs
  * Created by gigajew @ www.hackforums.net
  * 
  * I put hours of work in to this, so please do leave these credits :)
