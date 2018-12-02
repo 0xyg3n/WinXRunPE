@@ -1,5 +1,5 @@
 ﻿/*
- * WinXRunPE_AMD64.cs
+ * WinX64.cs
  * Created by gigajew @ www.hackforums.net
  * 
  * I put hours of work in to this, so please do leave these credits :)
@@ -21,7 +21,7 @@ namespace HackForums.gigajew
     /// This RunPE was created by gigajew @ www.hackforums.net for Windows 10 x64
     /// Please leave these credits as a reminder of all the hours of work put into this
     /// </summary>
-    public static unsafe class WinXRunPE_AMD64
+    public static unsafe class WinX64
     {
         public static bool Start(WinXParameters parameters)
         {
