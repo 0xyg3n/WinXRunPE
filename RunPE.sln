@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.106
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "antis", "antis\antis.csproj", "{BA01D9F2-5DC6-4C37-A822-6BD864D3BF15}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RunPE", "RunPE\RunPE.csproj", "{BA01D9F2-5DC6-4C37-A822-6BD864D3BF15}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace antis
+namespace RunPE
 {
     public static class Program
     {

@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{BA01D9F2-5DC6-4C37-A822-6BD864D3BF15}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>antis</RootNamespace>
-    <AssemblyName>antis</AssemblyName>
+    <RootNamespace>RunPE</RootNamespace>
+    <AssemblyName>RunPE</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
