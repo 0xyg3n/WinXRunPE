@@ -223,7 +223,7 @@ namespace HackForums.gigajew
         public uint SizeOfHeaders;
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x4d0)]
+    [StructLayout(LayoutKind.Explicit, Size = 0x4d0, Pack = 16)]
     public struct _CONTEXT_AMD64
     {
         [FieldOffset(0x30)]
@@ -271,7 +271,7 @@ namespace HackForums.gigajew
         public uint SizeOfHeaders;
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x2cc)]
+    [StructLayout(LayoutKind.Explicit, Size = 0x2cc, Pack = 16)]
     public struct _CONTEXT
     {
         [FieldOffset(0x00)]

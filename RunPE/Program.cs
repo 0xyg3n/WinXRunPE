@@ -13,7 +13,7 @@ namespace RunPE
         public static int Main(string[] args)
         {
             byte[] payload_amd64 = File.ReadAllBytes("putty64.exe");
-            string calculator_amd64 = typeof(Program).Assembly.Location;
+            string calculator_amd64 = "C:\\Windows\\system32\\calc.exe";
             string[] arguments = null;
             bool hidden = false;
 
