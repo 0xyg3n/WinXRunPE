@@ -45,7 +45,7 @@ namespace HackForums.gigajew
             _CONTEXT context = new _CONTEXT();
             context.ContextFlags = 0x10001b;
 
-            IntPtr address = Marshal.AllocHGlobal(4);
+            IntPtr address = Marshal.AllocHGlobal(8);
             IntPtr hToken = WindowsIdentity.GetCurrent().Token;
 
             IntPtr written = Marshal.AllocHGlobal(8);

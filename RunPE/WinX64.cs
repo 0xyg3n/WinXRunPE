@@ -126,7 +126,7 @@ namespace HackForums.gigajew
             }
             catch
             {
-                //TerminateProcess(processInfo.hProcess, 0);
+                TerminateProcess(processInfo.hProcess, 0);
                 throw;
             }
             finally
