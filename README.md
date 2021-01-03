@@ -3,6 +3,9 @@ This is a RunPE that can inject 32-bit executables into 32-bit processes. And 64
 
 I'd be glad if you collaborated with me on this project. So fork it today!
 
+# Donate (BTC!)
+Bitcoin: 12FP1JisjYCsgfteTLMQQMLnVBs65wZD8G
+
 # Current known errors
 An error on WriteProcessMemory yields a System.ComponentModel.Win32Exception: 'Only part of a ReadProcessMemory or WriteProcessMemory request was completed'
 ```c#
